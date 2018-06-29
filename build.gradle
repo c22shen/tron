@@ -22,6 +22,10 @@ repositories {
 	mavenCentral()
 }
 
+bootJar {
+	baseName = "tron-rest-service"
+	version = "0.1.0"
+}
 
 dependencies {
 	compile('org.springframework.boot:spring-boot-starter-actuator')
