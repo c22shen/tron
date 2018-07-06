@@ -4,9 +4,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.log4j.Logger;
 
 @RestController
 public class GreetingController {
+    static Logger logger = Logger.getLogger(GreetingController.class);
+    
     private static final String template = "Hello, %s!";
     private final AtomicLong counter = new AtomicLong();
     
@@ -17,7 +20,9 @@ public class GreetingController {
     }
 
     @RequestMapping(value = "/posting", method = RequestMethod.POST)
+
     public Posting posting(@RequestBody Greeting greeting) {
+        logger.info("helloSpring - request");
         return new Posting(1, "descriptionExample");
     }
 }
