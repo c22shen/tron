@@ -42,10 +42,14 @@ public class LogRequestFilter extends OncePerRequestFilter implements Ordered {
         ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
+//        if (!(response instanceof ContentCachingResponseWrapper)) {
+//            response = new ContentCachingResponseWrapper(response);
+//        }
+
         int status = HttpStatus.INTERNAL_SERVER_ERROR.value();
 
         // pass through filter chain to do the actual request handling
-        filterChain.doFilter(wrappedRequest, response);
+        filterChain.doFilter(wrappedRequest, wrappedResponse);
         status = response.getStatus();
 
         // only log request if there was an error
@@ -54,12 +58,33 @@ public class LogRequestFilter extends OncePerRequestFilter implements Ordered {
 
             // body can only be read after the actual request handling was done!
             getBody(wrappedRequest, trace);
-
+            getResponse(wrappedResponse, trace);
             //            Not yet working
 //            getResBody(wrappedResponse, trace);
             logTrace(wrappedRequest, trace);
 //        }
     }
+    
+
+    private void getResponse(ContentCachingResponseWrapper wrappedResponse, Map<String, Object> trace) throws IOException {
+        // wrap request to make sure we can read the body of the request (otherwise it will be consumed by the actual
+        // request handler)
+        byte[] buf = wrappedResponse.getContentAsByteArray();
+            if (buf.length > 0) {
+                String responseBody;
+                try {
+                    responseBody = new String(buf, 0, buf.length, wrappedResponse.getCharacterEncoding());
+                }
+                catch (UnsupportedEncodingException ex) {
+                    responseBody = "[unknown]";
+                }
+
+                trace.put("response", responseBody);
+                wrappedResponse.copyBodyToResponse();
+            }
+
+    }
+    
 
     private void getBody(ContentCachingRequestWrapper request, Map<String, Object> trace) {
         // wrap request to make sure we can read the body of the request (otherwise it will be consumed by the actual
@@ -81,25 +106,7 @@ public class LogRequestFilter extends OncePerRequestFilter implements Ordered {
         }
     }
 
-    private void getResBody(ContentCachingResponseWrapper response, Map<String, Object> trace) {
-        // wrap request to make sure we can read the body of the request (otherwise it will be consumed by the actual
-        // request handler)
-        ContentCachingResponseWrapper wrapper = WebUtils.getNativeResponse(response, ContentCachingResponseWrapper.class);
-        if (wrapper != null) {
-            byte[] buf = wrapper.getContentAsByteArray();
-            if (buf.length > 0) {
-                String payload;
-                try {
-                    payload = new String(buf, 0, buf.length, wrapper.getCharacterEncoding());
-                }
-                catch (UnsupportedEncodingException ex) {
-                    payload = "[unknown]";
-                }
 
-                trace.put("response", payload);
-            }
-        }
-    }
 
     private void logTrace(HttpServletRequest request, Map<String, Object> trace) {
         Object method = trace.get("method");
